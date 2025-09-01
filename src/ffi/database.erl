@@ -1,5 +1,5 @@
 -module(database).
--export([init/0, add_user/2, get_user/1]).
+-export([init/0, init_test/0,add_user/2, get_user/1]).
 
 -record(user, {id, name}).
 
@@ -48,6 +48,46 @@ init() ->
         throw:Err -> lists:flatten(io_lib:format("init_error: ~p", [Err]));
         _:Err -> lists:flatten(io_lib:format("init_exception: ~p", [Err]))
     end.
+
+init_test() ->
+   try
+       % Para y limpia mnesia primero si está corriendo
+       mnesia:stop(),
+      
+       % Crea el schema solo en memoria
+       case mnesia:create_schema([node()]) of
+           ok -> ok;
+           {error, {_, {already_exists, _}}} -> ok;
+           Error1 -> throw({schema_error, Error1})
+       end,
+      
+       % Inicia mnesia
+       mnesia:start(),
+      
+       % Crea la tabla SOLO EN MEMORIA (ram_copies en lugar de disc_copies)
+       Result = mnesia:create_table(user, [
+           {attributes, record_info(fields, user)},
+           {ram_copies, [node()]},
+           {type, set}
+       ]),
+      
+       case Result of
+           {atomic, ok} -> ok;
+           {aborted, {already_exists, user}} -> ok;
+           Error2 -> throw({table_error, Error2})
+       end,
+      
+       % Espera a que esté lista
+       case mnesia:wait_for_tables([user], 10000) of
+           ok -> ~"init_ok";  % Devuelve binario en lugar de string
+           timeout -> ~"init_timeout";
+           Error3 -> list_to_binary(io_lib:format("wait_error: ~p", [Error3]))
+       end
+      
+   catch
+       throw:Err -> list_to_binary(io_lib:format("init_error: ~p", [Err]));
+       _:Err -> list_to_binary(io_lib:format("init_exception: ~p", [Err]))
+   end.
 
 add_user(Id, Name) ->
     User = #user{id = Id, name = Name},
