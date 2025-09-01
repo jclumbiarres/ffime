@@ -1,5 +1,5 @@
 import ffi/mnesia
-import gleam/string
+import gleam/erlang/charlist
 import gleeunit
 import gleeunit/should
 
@@ -16,8 +16,9 @@ pub fn init_test() {
 pub fn add_user_test() {
   let _ = mnesia.init_test()
   let result = mnesia.add_user(1, "TestUser")
-  // The result is a Charlist, so inspect shows the constructor
-  should.equal(string.inspect(result), "charlist.from_string(\"ok\")")
+  let result_to_string = charlist.from_string(result)
+  let result_ok_to_charlist = charlist.from_string("ok")
+  should.equal(result_to_string, result_ok_to_charlist)
 }
 
 pub fn get_user_test() {
@@ -25,8 +26,7 @@ pub fn get_user_test() {
   // Usa init_test
   let _ = mnesia.add_user(2, "AnotherUser")
   let result = mnesia.get_user(2)
-  should.equal(
-    string.inspect(result),
-    "charlist.from_string(\"found: AnotherUser\")",
-  )
+  let result_to_string = charlist.from_string(result)
+  let result_found_to_charlist = charlist.from_string("found: AnotherUser")
+  should.equal(result_to_string, result_found_to_charlist)
 }
